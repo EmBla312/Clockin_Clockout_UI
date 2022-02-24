@@ -1,0 +1,196 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body>
+	<div class="flex flex-col flex-grow h-full justify-center content-center">
+		<!-- 
+	  	  IRL we use the google maps API to render a map with the users location.
+	  	  The location is saved to the DB, so managers can verify the employee is on site.
+	  	  For this challenge we've put a placeholder map image in there.
+	    -->		
+		<div id="map" class="h-96 bg-cover bg-center"
+			style="background-image: url('https://snazzy-maps-cdn.azureedge.net/assets/8097-wy.png?v=20170626083314" )>			
+		</div>
+		<!--Container for content on clock-in - created so that button can position between map and content-->
+		<div id="content" class="relative px-4">			
+			<!--clock-in-button-->
+			<button id="btn-clock-in" onclick="clockinout(true)"
+				class="p-16 absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-pink-500 hover:bg-pink-400 shadow-lg text-3xl font-bold text-white">
+				Clock In
+			</button>			
+			<!--clocked-out-view-->
+			<div id="clocked-out" class="flex flex-col justify-center items-center overflow-hidden pt-32">
+				<h1 class="text-3xl font-bold text-slate-500">
+					Past Shifts
+				</h1>
+				<!--
+					Previous Shifts Column - allows for scrolling 
+					But rest of screen is fixed. This is so that the map and clock-in option is always in view
+				-->
+				<div id="prev-shifts" class="h-80 m-2 fixed flex flex-col bottom-2 place-content-start overflow-y-auto">
+					<div class="m-4 p-5 rounded-md border-2 border-slate-200 shadow-md text-left">
+						<h2 class="px-3 py-2 text-2xl font-bold text-blue-700">Tuesday</h2>
+						<p class="px-3 font-bold text-sm">May 4, 2021
+							<!--
+								yellow background to indicate user did not quite meet their shift hours 
+								(< 15 min under expected amount)
+							-->
+							<span class="m-1 p-2 rounded-full bg-yellow-100 font-bold text-slate-600">5hr 28min</span></p>
+						<h6 class="mt-3 px-3 font-bold">Notes:</h6>
+						<div class="px-3">Swapped cashier role with Abbey and worked drive-thru from 10-12.</div>
+					</div>					
+					<div class="m-4 p-5 rounded-md border-2 border-slate-200 shadow-md text-left">
+						<h2 class="px-3 py-2 text-2xl font-bold text-blue-700">Monday</h2>
+						<p class="px-3 font-bold text-sm">May 3, 2021
+							<!--green background to indicate user met or exceeded shift hour-->
+							<span class="m-1 p-2 rounded-full bg-green-100 font-bold text-slate-600">5hr 01min</span>
+						</p>
+						<!--
+							user did not log any notes for this shift, 
+							therefore this shift does not display a "Notes:" label or shift-note text
+						-->
+					</div>
+					<div class="m-4 p-5 rounded-md border-2 border-slate-200 shadow-md text-left">
+						<h2 class="px-3 py-2 text-2xl font-bold text-blue-700">Sunday</h2>
+						<p class="px-3 font-bold text-sm">May 2, 2021
+							<!--
+								red background to indicate user did not meet their shift hours 
+								(> 15 min under expected amount)
+							-->
+							<span class="m-1 p-2 rounded-full bg-red-100 font-bold text-slate-600">2hr 44min</span>
+						</p>
+						<h6 class="mt-3 px-3 font-bold">Notes:</h6>
+						<!--users could log multiple notes for a shift-->
+						<div class="px-3">Cleaned and santized surfaces. Bathroom inspection.</div>						
+						<div class="px-3">Met with new trainee who starts Wednesday.</div>
+					</div>					
+				</div>
+			</div>			
+		</div>
+		<!--Clocked-In view - no need for map, thus not contained in "content" class-->
+		<div id="clocked-in" class="hidden relative flex flex-col justify-center items-center">
+			<!--timer that displays a digital clock of hr, min, and sec that the user has been clocked in-->
+			<p id="clock" class="hidden left-1/2 rounded-lg bg-white text-6xl text-black font-bold p-16">
+				<span id="hr">00</span>:<span id="min">00</span>:<span id="sec">00</span>
+			</p>
+			<h1 class="text-3xl font-bold text-blue-600">
+				You're clocked in!
+			</h1>
+			<!--
+				name="shift-notes" included with assumption that textarea input 
+				would be submitted as form input to backend.
+				Placeholder is included for clear instructions and indication
+				of what this textarea is for.
+			-->
+			<textarea id="notes" name="shift-notes" 
+				class="w-4/5 h-40 mt-8 mx-8 border-2 border-slate-200 text-lg" 
+				name="shift_notes" placeholder="Add a shift note...">
+			</textarea>
+			<!--
+				adding a button for submitting the shift note. Original design does not call for this, 
+				but user experience might benefit from visually confirming their shift note is saved
+				and also being able to add additional shift notes (rather than keeping running text open)
+			-->
+			<button id="btn-submit-note" onclick="cleartextarea()" 
+				class="w-4/5 mt-4 p-4 rounded-lg bg-slate-200 hover:bg-slate-100 hover:shadow-md text-md text-black font-bold">
+				Submit Note
+			</button>
+			<button id="btn-clock-out" onclick="clockinout(false)" 
+				class="w-96 mt-10 p-12 fixed bottom-4 rounded-md bg-blue-500 hover:bg-blue-400 text-3xl text-white font-bold">
+				Clock Out
+			</button>
+		</div>
+	</div>
+</body>
+</html>
+<script> 
+
+	var clocked_out = document.getElementById("clocked-out");
+	var clocked_in = document.getElementById("clocked-in");
+
+	var btn_clocked_in = document.getElementById("btn-clock-in");
+	
+	var clock = document.getElementById("clock");
+	var map = document.getElementById("map");
+
+	var txtH = document.getElementById("hr");
+	var txtM = document.getElementById("min");
+	var txtS = document.getElementById("sec");
+	
+	var interval;
+	
+	/**
+	 * toggles whether to display clocked in or clocked out content
+	 * if user is clocking in, the timer is set
+	 * if the user is clocking out, the timer is reset
+	 * @param {bool} isClockedIn	Flag for determining if user is clocking in or out
+	 */
+	function clockinout(isClockedIn) {
+		
+		clocked_out.classList.toggle("hidden");		
+		clocked_in.classList.toggle("hidden");		
+		btn_clocked_in.classList.toggle("hidden");		
+		clock.classList.toggle("hidden");			
+		map.classList.toggle("hidden");		
+
+		if(isClockedIn) {			
+			var d = new Date(); 
+			var time = d.getTime(); //when did they start shift
+  
+			//start timer
+			interval = setInterval(function() { updateTime(time); }, 1000);
+		}
+		else {
+			//reset timer
+			clearInterval(interval);
+			txtS.textContent = "00";
+			txtM.textContent = "00";
+			txtH.textContent = "00";
+		}
+	}
+
+	/**
+	 * updates the time by subtracting the current time
+	 * from the time they started their shift
+	 * @param {number} time		The time, in milliseconds, that the user started their shift
+	 */
+	function updateTime(time) {
+
+		var currDate = new Date(); 
+		var t = currDate.getTime(); //current time
+
+		var diff = t - time;
+
+		txtS.textContent = ""+pad(Math.floor((diff/1000)%60));
+		txtM.textContent = ""+pad(Math.floor((diff/(1000*60))%60));
+		txtH.textContent = ""+pad(Math.floor(diff/(1000*60*60)));
+	}
+
+	/** 
+	 * if the hr, min, sec doesn't fill 2 digits, then "pad" display with 0 prefix
+	 * otherwise, just display the number
+	 * @param {number} value	The hr, min, or sec number calculated from currDate - startDate
+	 * @return {string}			The concatenated string of either the 0 prefix or empty string to value
+	 */
+	function pad(value) {
+		if(value < 10)
+			return "0"+value;
+		else
+			return ""+value;
+	}
+
+	/**
+	 * on submitting a shift note, the textarea should be cleared
+	 * so user can enter another shift note
+	 */
+	function cleartextarea() {
+		var notes = document.getElementById("notes");
+		notes.value = "";
+	}
+</script>
