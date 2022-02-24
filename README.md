@@ -30,4 +30,4 @@ Workforce.com Junior Product Designer code challenge submission
 2. Some HTML elements have the same utility classes used. I noticed Tailwind allows customization and building your own styling off of their library. This might be useful for **minimizing redundancy of code**.
 3. UI **responsiveness for mobile views**
   * UI worked on multiple forms of mobile displays (I mainly tested with iPhone XR, iPhone 12 Pro, Samsung Galaxy S20)
-  * BUT, not all mobile screens worked, and some allowed scrolling the screen on top of scrolling through the shifts
+  * BUT, not all mobile screens worked, and some allowed scrolling the screen in addition to scrolling through the shifts
